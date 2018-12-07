@@ -5,12 +5,15 @@
 extern crate diffs;
 #[macro_use]
 extern crate log;
+extern crate chrono;
 
 use std::{
     io::{self, BufRead},
     fs,
     collections::VecDeque,
 };
+
+use chrono::{DateTime, Local};
 
 pub fn unidiff(file1_path: &str, file2_path: &str, context_radius: usize) -> io::Result<Vec<String>> {
     let file1 = fs::File::open(file1_path)?;
@@ -41,13 +44,20 @@ pub fn unidiff(file1_path: &str, file2_path: &str, context_radius: usize) -> io:
     let mut unidiff = processor.unidiff();
     if unidiff.len() > 0 {
         let mut data = Vec::with_capacity(unidiff.len() + 2);
+        let metadata = fs::metadata(file1_path)?;
+        let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
         data.push(format!(
             "--- {}\t{}",
-            file1_path, "2018-12-07 11:55:51.000000000 +0000"
+            file1_path,
+            filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
         ));
+        
+        let metadata = fs::metadata(file2_path)?;
+        let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
         data.push(format!(
             "+++ {}\t{}",
-            file2_path, "2018-12-07 11:55:55.000000000 +0000"
+            file2_path,
+            filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
         ));
         data.append(&mut unidiff);
         Ok(data)
@@ -116,7 +126,6 @@ impl ChangeSet {
     }
 
     pub fn to_vec(&self, removed: usize, inserted: usize) -> Vec<String> {
-        debug!("DISPLAY {} -{} +{}", self.equaled, self.removed, self.inserted);
         let mut start = self.start.unwrap();
         if start == 0 {
             start = 1;
