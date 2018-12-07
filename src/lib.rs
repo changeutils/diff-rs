@@ -18,21 +18,11 @@ use chrono::{DateTime, Local};
 fn read_file(path: &str) -> io::Result<Vec<String>> {
     let file = fs::File::open(path)?;
     let file = io::BufReader::new(file);
-    let mut err = None;
-    let file = file
+
+    file
         .lines()
-        .map(|result| match result {
-            Ok(data) => data,
-            Err(error) => {
-                err = Some(error);
-                String::new()
-            }
-        })
-        .collect::<Vec<String>>();
-    if let Some(err) = err {
-        return Err(err);
-    }
-    Ok(file)
+        .collect()
+
 }
 
 fn header(path: &str) -> io::Result<String> {
