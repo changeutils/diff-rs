@@ -15,26 +15,39 @@ use std::{
 
 use chrono::{DateTime, Local};
 
-pub fn unidiff(file1_path: &str, file2_path: &str, context_radius: usize) -> io::Result<Vec<String>> {
-    let file1 = fs::File::open(file1_path)?;
-    let file1 = io::BufReader::new(file1);
-    let file1 = file1
+fn read_file(path: &str) -> io::Result<Vec<String>> {
+    let file = fs::File::open(path)?;
+    let file = io::BufReader::new(file);
+    let mut err = None;
+    let file = file
         .lines()
         .map(|result| match result {
             Ok(data) => data,
-            Err(error) => panic!(error),
+            Err(error) => {
+                err = Some(error);
+                String::new()
+            }
         })
         .collect::<Vec<String>>();
+    if let Some(err) = err {
+        return Err(err);
+    }
+    Ok(file)
+}
 
-    let file2 = fs::File::open(file2_path)?;
-    let file2 = io::BufReader::new(file2);
-    let file2 = file2
-        .lines()
-        .map(|result| match result {
-            Ok(data) => data,
-            Err(error) => panic!(error),
-        })
-        .collect::<Vec<String>>();
+fn header(path: &str) -> io::Result<String> {
+    let metadata = fs::metadata(path)?;
+    let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
+    Ok(format!(
+        "--- {}\t{}",
+        path,
+        filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
+    ))
+}
+
+pub fn unidiff(file1_path: &str, file2_path: &str, context_radius: usize) -> io::Result<Vec<String>> {
+    let file1 = read_file(file1_path)?;
+    let file2 = read_file(file2_path)?;
 
     let mut processor = Processor::new(&file1, &file2, context_radius);
     {
@@ -43,20 +56,8 @@ pub fn unidiff(file1_path: &str, file2_path: &str, context_radius: usize) -> io:
     }
 
     let mut data = Vec::with_capacity(2);
-    let metadata = fs::metadata(file1_path)?;
-    let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
-    data.push(format!(
-        "--- {}\t{}",
-        file1_path,
-        filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
-    ));
-    let metadata = fs::metadata(file2_path)?;
-    let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
-    data.push(format!(
-        "+++ {}\t{}",
-        file2_path,
-        filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
-    ));
+    data.push(header(file1_path)?);
+    data.push(header(file2_path)?);
 
     let unidiff = processor.result();
     if unidiff.len() > 0 {
