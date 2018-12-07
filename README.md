@@ -1,0 +1,3 @@
+# difflib
+
+Rust unidiff implementation.
