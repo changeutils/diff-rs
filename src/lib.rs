@@ -41,28 +41,29 @@ pub fn unidiff(file1_path: &str, file2_path: &str, context_radius: usize) -> io:
         let mut replace = diffs::Replace::new(&mut processor);
         let _ = diffs::myers::diff(&mut replace, &file1, &file2)?;
     }
-    let mut unidiff = processor.unidiff();
+
+    let mut data = Vec::with_capacity(2);
+    let metadata = fs::metadata(file1_path)?;
+    let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
+    data.push(format!(
+        "--- {}\t{}",
+        file1_path,
+        filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
+    ));
+    let metadata = fs::metadata(file2_path)?;
+    let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
+    data.push(format!(
+        "+++ {}\t{}",
+        file2_path,
+        filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
+    ));
+
+    let unidiff = processor.result();
     if unidiff.len() > 0 {
-        let mut data = Vec::with_capacity(unidiff.len() + 2);
-        let metadata = fs::metadata(file1_path)?;
-        let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
-        data.push(format!(
-            "--- {}\t{}",
-            file1_path,
-            filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
-        ));
-        
-        let metadata = fs::metadata(file2_path)?;
-        let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
-        data.push(format!(
-            "+++ {}\t{}",
-            file2_path,
-            filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
-        ));
-        data.append(&mut unidiff);
+        data.append(unidiff);
         Ok(data)
     } else {
-        Ok(unidiff)
+        Ok(Vec::new())
     }
 }
 
@@ -93,8 +94,8 @@ impl<'a> Processor<'a> {
         }
     }
 
-    pub fn unidiff(&self) -> Vec<String> {
-        self.result.clone()
+    pub fn result(&mut self) -> &mut Vec<String> {
+        &mut self.result
     }
 }
 
