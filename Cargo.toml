@@ -1,0 +1,8 @@
+[package]
+name = "unidiff"
+version = "0.1.0"
+authors = ["hedgar2017 <hedgar2017@gmail.com>"]
+
+[dependencies]
+diffs = "0.2.1"
+log = "0.4.6"
