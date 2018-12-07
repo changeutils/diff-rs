@@ -76,7 +76,7 @@ pub struct Processor<'a> {
     inserted: usize,
     removed: usize,
 
-    changeset: ChangeSet,
+    context: Context,
     result: Vec<String>,
 }
 
@@ -90,7 +90,7 @@ impl<'a> Processor<'a> {
             inserted: 0,
             removed: 0,
 
-            changeset: ChangeSet::new(),
+            context: Context::new(),
             result: Vec::new(),
         }
     }
@@ -100,7 +100,7 @@ impl<'a> Processor<'a> {
     }
 }
 
-struct ChangeSet {
+struct Context {
     pub start: Option<usize>,
     pub data: VecDeque<String>,
     pub counter: usize,
@@ -112,7 +112,7 @@ struct ChangeSet {
     pub inserted: usize,
 }
 
-impl ChangeSet {
+impl Context {
     pub fn new() -> Self {
         Self {
             start: None,
@@ -128,7 +128,11 @@ impl ChangeSet {
     }
 
     pub fn to_vec(&self, removed: usize, inserted: usize) -> Vec<String> {
-        let mut start = self.start.unwrap();
+        let mut start = if let Some(start) = self.start {
+            start
+        } else {
+            return Vec::new();
+        };
         if start == 0 {
             start = 1;
         }
@@ -154,52 +158,52 @@ impl<'a> diffs::Diff for Processor<'a> {
 
     fn equal(&mut self, old: usize, new: usize, len: usize) -> Result<(), Self::Error> {
         debug!("EQUAL {} {} {}", old, new, len);
-        if self.changeset.start.is_none() {
-            self.changeset.start = Some(old);
-            debug!("START INIT {}", self.changeset.start.unwrap());
+        if self.context.start.is_none() {
+            self.context.start = Some(old);
+            debug!("START INIT {}", self.context.start.unwrap());
         }
 
-        self.changeset.counter = 0;
+        self.context.counter = 0;
         for i in old..old+len {
-            if !self.changeset.changed {
-                if self.changeset.counter < self.context_radius {
-                    self.changeset.data.push_back(format!(" {}", self.file1[i]));
-                    self.changeset.equaled += 1;
-                    self.changeset.counter += 1;
-                    debug!("NOT CHANGED YET. PUSHED (counter = {})", self.changeset.counter);
+            if !self.context.changed {
+                if self.context.counter < self.context_radius {
+                    self.context.data.push_back(format!(" {}", self.file1[i]));
+                    self.context.equaled += 1;
+                    self.context.counter += 1;
+                    debug!("NOT CHANGED YET. PUSHED (counter = {})", self.context.counter);
                 }
-                if self.changeset.counter >= self.context_radius {
-                    self.changeset.data.push_back(format!(" {}", self.file1[i]));
-                    self.changeset.data.pop_front();
-                    if let Some(ref mut start) = self.changeset.start {
+                if self.context.counter >= self.context_radius {
+                    self.context.data.push_back(format!(" {}", self.file1[i]));
+                    self.context.data.pop_front();
+                    if let Some(ref mut start) = self.context.start {
                         *start += 1;
                         debug!("START EDIT {}", start);
                     }
-                    self.changeset.counter += 1;
-                    debug!("NOT CHANGED YET. PUSHED AND POPPED (counter = {})", self.changeset.counter);
+                    self.context.counter += 1;
+                    debug!("NOT CHANGED YET. PUSHED AND POPPED (counter = {})", self.context.counter);
                 }
             }
-            if self.changeset.changed {
-                if self.changeset.counter < self.context_radius * 2 {
-                    self.changeset.data.push_back(format!(" {}", self.file1[i]));
-                    self.changeset.equaled += 1;
-                    self.changeset.counter += 1;
-                    debug!("CHANGED ALREADY. PUSHED (counter = {})", self.changeset.counter);
+            if self.context.changed {
+                if self.context.counter < self.context_radius * 2 {
+                    self.context.data.push_back(format!(" {}", self.file1[i]));
+                    self.context.equaled += 1;
+                    self.context.counter += 1;
+                    debug!("CHANGED ALREADY. PUSHED (counter = {})", self.context.counter);
                 }
-                if self.changeset.counter == self.context_radius && len > self.context_radius * 2 {
-                    self.result.append(&mut self.changeset.to_vec(self.removed, self.inserted));
+                if self.context.counter == self.context_radius && len > self.context_radius * 2 {
+                    self.result.append(&mut self.context.to_vec(self.removed, self.inserted));
 
-                    let mut changeset = ChangeSet::new();
-                    changeset.data.push_back("".to_owned());
-                    changeset.data.push_back("".to_owned());
-                    changeset.data.push_back("".to_owned());
-                    changeset.counter = self.context_radius;
-                    changeset.equaled = self.context_radius;
-                    changeset.start = Some(i-1);
+                    let mut context = Context::new();
+                    context.data.push_back("".to_owned());
+                    context.data.push_back("".to_owned());
+                    context.data.push_back("".to_owned());
+                    context.counter = self.context_radius;
+                    context.equaled = self.context_radius;
+                    context.start = Some(i-1);
 
-                    self.removed += self.changeset.removed;
-                    self.inserted += self.changeset.inserted;
-                    self.changeset = changeset;               
+                    self.removed += self.context.removed;
+                    self.inserted += self.context.inserted;
+                    self.context = context;               
                 }
             }
         }
@@ -216,66 +220,66 @@ impl<'a> diffs::Diff for Processor<'a> {
         new_len: usize,
     ) -> Result<(), Self::Error> {
         debug!("REPLACE {} {} {} {}", old, old_len, new, new_len);
-        if self.changeset.start.is_none() {
-            self.changeset.start = Some(old);
-            debug!("START INIT {}", self.changeset.start.unwrap());
+        if self.context.start.is_none() {
+            self.context.start = Some(old);
+            debug!("START INIT {}", self.context.start.unwrap());
         }
         
         for i in old..old+old_len {
-            self.changeset.data.push_back(format!("-{}", self.file1[i]));
+            self.context.data.push_back(format!("-{}", self.file1[i]));
         }
         for i in new..new+new_len {
-            self.changeset.data.push_back(format!("+{}", self.file2[i]));
+            self.context.data.push_back(format!("+{}", self.file2[i]));
         }
-        self.changeset.changed = true;
-        self.changeset.removed += old_len;
-        self.changeset.inserted += new_len;
+        self.context.changed = true;
+        self.context.removed += old_len;
+        self.context.inserted += new_len;
 
         Ok(())
     }
 
     fn insert(&mut self, old: usize, new: usize, new_len: usize) -> Result<(), Self::Error> {
         debug!("INSERT {} {} {}", old, new, new_len);
-        if self.changeset.start.is_none() {
-            self.changeset.start = Some(old);
-            debug!("START INIT {}", self.changeset.start.unwrap());
+        if self.context.start.is_none() {
+            self.context.start = Some(old);
+            debug!("START INIT {}", self.context.start.unwrap());
         }
         
         for i in new..new + new_len {
-            self.changeset.data.push_back(format!("+{}", self.file2[i]));
+            self.context.data.push_back(format!("+{}", self.file2[i]));
         }
-        self.changeset.changed = true;
-        self.changeset.inserted += new_len;
+        self.context.changed = true;
+        self.context.inserted += new_len;
 
         Ok(())
     }
 
     fn delete(&mut self, old: usize, len: usize) -> Result<(), Self::Error> {
         debug!("DELETE {} {}", old, len);
-        if self.changeset.start.is_none() {
-            self.changeset.start = Some(old);
-            debug!("START INIT {}", self.changeset.start.unwrap());
+        if self.context.start.is_none() {
+            self.context.start = Some(old);
+            debug!("START INIT {}", self.context.start.unwrap());
         }
 
         for i in old..old + len {
-            self.changeset.data.push_back(format!("-{}", self.file1[i]));
+            self.context.data.push_back(format!("-{}", self.file1[i]));
         }
-        self.changeset.changed = true;
-        self.changeset.removed += len;
+        self.context.changed = true;
+        self.context.removed += len;
 
         Ok(())
     }
 
     fn finish(&mut self) -> Result<(), Self::Error> {
-        if self.changeset.counter > self.context_radius {
-            let truncation = self.changeset.counter - self.context_radius;
-            if self.changeset.data.len() > truncation {
-                let new_size = self.changeset.data.len() - truncation;
-                self.changeset.equaled -= truncation;
-                self.changeset.data.truncate(new_size);
+        if self.context.counter > self.context_radius {
+            let truncation = self.context.counter - self.context_radius;
+            if self.context.data.len() > truncation {
+                let new_size = self.context.data.len() - truncation;
+                self.context.equaled -= truncation;
+                self.context.data.truncate(new_size);
             }
         }
-        self.result.append(&mut self.changeset.to_vec(self.removed, self.inserted));
+        self.result.append(&mut self.context.to_vec(self.removed, self.inserted));
         Ok(())
     }
 }
