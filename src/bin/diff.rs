@@ -2,8 +2,8 @@
 //! The GNU unidiff Rust binary entry point.
 //!
 
-extern crate unidiff;
 extern crate chrono;
+extern crate unidiff;
 
 use std::{
     fs,
@@ -29,13 +29,13 @@ fn main() -> io::Result<()> {
     const FILE_2: &'static str = "Cargo.toml";
     const CONTEXT_RADIUS: usize = 3;
 
-    let file1 = read_file(FILE_1)?;
-    let file2 = read_file(FILE_2)?;
+    let text1 = read_file(FILE_1)?;
+    let text2 = read_file(FILE_2)?;
 
     println!("--- {}\t{}", FILE_1, timestamp(FILE_1)?);
     println!("+++ {}\t{}", FILE_2, timestamp(FILE_2)?);
 
-    for s in unidiff::unidiff(&file1, &file2, CONTEXT_RADIUS)? {
+    for s in unidiff::unidiff(&text1, &text2, CONTEXT_RADIUS)? {
         println!("{}", s);
     }
     Ok(())

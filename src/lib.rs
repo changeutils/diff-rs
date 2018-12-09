@@ -3,27 +3,25 @@
 //!
 
 extern crate diffs;
-#[macro_use]
-extern crate log;
 
-use std::{io, collections::VecDeque};
+use std::{collections::VecDeque, io};
 
 pub fn unidiff(
-    file1: &[String],
-    file2: &[String],
+    text1: &[String],
+    text2: &[String],
     context_radius: usize,
 ) -> io::Result<Vec<String>> {
-    let mut processor = Processor::new(&file1, &file2, context_radius);
+    let mut processor = Processor::new(&text1, &text2, context_radius);
     {
         let mut replace = diffs::Replace::new(&mut processor);
-        let _ = diffs::myers::diff(&mut replace, &file1, &file2)?;
+        let _ = diffs::myers::diff(&mut replace, &text1, &text2)?;
     }
     Ok(processor.result())
 }
 
 struct Processor<'a> {
-    file1: &'a [String],
-    file2: &'a [String],
+    text1: &'a [String],
+    text2: &'a [String],
 
     context_radius: usize,
     inserted: usize,
@@ -34,10 +32,10 @@ struct Processor<'a> {
 }
 
 impl<'a> Processor<'a> {
-    pub fn new(file1: &'a [String], file2: &'a [String], context_radius: usize) -> Self {
+    pub fn new(text1: &'a [String], text2: &'a [String], context_radius: usize) -> Self {
         Self {
-            file1,
-            file2,
+            text1,
+            text2,
 
             context_radius,
             inserted: 0,
@@ -104,8 +102,7 @@ impl Context {
 impl<'a> diffs::Diff for Processor<'a> {
     type Error = io::Error;
 
-    fn equal(&mut self, old: usize, new: usize, len: usize) -> Result<(), Self::Error> {
-        debug!("EQUAL {} {} {}", old, new, len);
+    fn equal(&mut self, old: usize, _new: usize, len: usize) -> Result<(), Self::Error> {
         if self.context.start.is_none() {
             self.context.start = Some(old);
         }
@@ -114,36 +111,24 @@ impl<'a> diffs::Diff for Processor<'a> {
         for i in old..old + len {
             if !self.context.changed {
                 if self.context.counter < self.context_radius {
-                    self.context.data.push_back(format!(" {}", self.file1[i]));
+                    self.context.data.push_back(format!(" {}", self.text1[i]));
                     self.context.equaled += 1;
                     self.context.counter += 1;
-                    debug!(
-                        "NOT CHANGED YET. PUSHED (counter = {})",
-                        self.context.counter
-                    );
                 }
                 if self.context.counter >= self.context_radius {
-                    self.context.data.push_back(format!(" {}", self.file1[i]));
+                    self.context.data.push_back(format!(" {}", self.text1[i]));
                     self.context.data.pop_front();
                     if let Some(ref mut start) = self.context.start {
                         *start += 1;
                     }
                     self.context.counter += 1;
-                    debug!(
-                        "NOT CHANGED YET. PUSHED AND POPPED (counter = {})",
-                        self.context.counter
-                    );
                 }
             }
             if self.context.changed {
                 if self.context.counter < self.context_radius * 2 {
-                    self.context.data.push_back(format!(" {}", self.file1[i]));
+                    self.context.data.push_back(format!(" {}", self.text1[i]));
                     self.context.equaled += 1;
                     self.context.counter += 1;
-                    debug!(
-                        "CHANGED ALREADY. PUSHED (counter = {})",
-                        self.context.counter
-                    );
                 }
                 if self.context.counter == self.context_radius && len > self.context_radius * 2 {
                     self.result
@@ -174,16 +159,15 @@ impl<'a> diffs::Diff for Processor<'a> {
         new: usize,
         new_len: usize,
     ) -> Result<(), Self::Error> {
-        debug!("REPLACE {} {} {} {}", old, old_len, new, new_len);
         if self.context.start.is_none() {
             self.context.start = Some(old);
         }
 
         for i in old..old + old_len {
-            self.context.data.push_back(format!("-{}", self.file1[i]));
+            self.context.data.push_back(format!("-{}", self.text1[i]));
         }
         for i in new..new + new_len {
-            self.context.data.push_back(format!("+{}", self.file2[i]));
+            self.context.data.push_back(format!("+{}", self.text2[i]));
         }
         self.context.changed = true;
         self.context.removed += old_len;
@@ -193,13 +177,12 @@ impl<'a> diffs::Diff for Processor<'a> {
     }
 
     fn insert(&mut self, old: usize, new: usize, new_len: usize) -> Result<(), Self::Error> {
-        debug!("INSERT {} {} {}", old, new, new_len);
         if self.context.start.is_none() {
             self.context.start = Some(old);
         }
 
         for i in new..new + new_len {
-            self.context.data.push_back(format!("+{}", self.file2[i]));
+            self.context.data.push_back(format!("+{}", self.text2[i]));
         }
         self.context.changed = true;
         self.context.inserted += new_len;
@@ -208,13 +191,12 @@ impl<'a> diffs::Diff for Processor<'a> {
     }
 
     fn delete(&mut self, old: usize, len: usize) -> Result<(), Self::Error> {
-        debug!("DELETE {} {}", old, len);
         if self.context.start.is_none() {
             self.context.start = Some(old);
         }
 
         for i in old..old + len {
-            self.context.data.push_back(format!("-{}", self.file1[i]));
+            self.context.data.push_back(format!("-{}", self.text1[i]));
         }
         self.context.changed = true;
         self.context.removed += len;
