@@ -5,60 +5,23 @@
 extern crate diffs;
 #[macro_use]
 extern crate log;
-extern crate chrono;
 
-use std::{
-    collections::VecDeque,
-    fs,
-    io::{self, BufRead},
-};
-
-use chrono::{DateTime, Local};
-
-fn read_file(path: &str) -> io::Result<Vec<String>> {
-    let file = fs::File::open(path)?;
-    let file = io::BufReader::new(file);
-    file.lines().collect()
-}
-
-fn header(path: &str) -> io::Result<String> {
-    let metadata = fs::metadata(path)?;
-    let filetime: DateTime<Local> = DateTime::from(metadata.modified()?);
-    Ok(format!(
-        "--- {}\t{}",
-        path,
-        filetime.format("%Y-%m-%d %H:%M:%S.%f %z").to_string(),
-    ))
-}
+use std::{io, collections::VecDeque};
 
 pub fn unidiff(
-    file1_path: &str,
-    file2_path: &str,
+    file1: &[String],
+    file2: &[String],
     context_radius: usize,
 ) -> io::Result<Vec<String>> {
-    let file1 = read_file(file1_path)?;
-    let file2 = read_file(file2_path)?;
-
     let mut processor = Processor::new(&file1, &file2, context_radius);
     {
         let mut replace = diffs::Replace::new(&mut processor);
         let _ = diffs::myers::diff(&mut replace, &file1, &file2)?;
     }
-
-    let mut data = Vec::with_capacity(2);
-    data.push(header(file1_path)?);
-    data.push(header(file2_path)?);
-
-    let unidiff = processor.result();
-    if unidiff.len() > 0 {
-        data.append(unidiff);
-        Ok(data)
-    } else {
-        Ok(Vec::new())
-    }
+    Ok(processor.result())
 }
 
-pub struct Processor<'a> {
+struct Processor<'a> {
     file1: &'a [String],
     file2: &'a [String],
 
@@ -85,8 +48,8 @@ impl<'a> Processor<'a> {
         }
     }
 
-    pub fn result(&mut self) -> &mut Vec<String> {
-        &mut self.result
+    pub fn result(self) -> Vec<String> {
+        self.result
     }
 }
 
