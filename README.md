@@ -1,3 +1,3 @@
-# difflib
+# diff-rs
 
-Rust unidiff implementation.
+Rust diff implementation.
