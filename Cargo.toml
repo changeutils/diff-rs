@@ -1,5 +1,5 @@
 [package]
-name = "unidiff"
+name = "diff-rs"
 version = "0.1.0"
 authors = ["hedgar2017 <hedgar2017@gmail.com>"]
 
