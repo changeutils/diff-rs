@@ -2,8 +2,10 @@
 //! The GNU unidiff Rust binary entry point.
 //!
 
-extern crate chrono;
 extern crate unidiff;
+
+extern crate clap;
+extern crate chrono;
 
 use std::{
     fs,
@@ -25,17 +27,46 @@ fn timestamp(path: &str) -> io::Result<String> {
 }
 
 fn main() -> io::Result<()> {
-    const FILE_1: &'static str = "Cargo.lock";
-    const FILE_2: &'static str = "Cargo.toml";
-    const CONTEXT_RADIUS: usize = 3;
+    let args = clap::App::new(env!("CARGO_PKG_NAME"))
+        .version(env!("CARGO_PKG_VERSION"))
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about(env!("CARGO_PKG_DESCRIPTION"))
+        .arg(
+            clap::Arg::with_name("file_1")
+                .help("The first file to compare")
+                .index(1)
+                .value_name("PATH_1")
+                .takes_value(true)
+                .required(true))
+        .arg(
+            clap::Arg::with_name("file_2")
+                .help("The second file to compare")
+                .index(2)
+                .value_name("PATH_2")
+                .takes_value(true)
+                .required(true))
+        .arg(
+            clap::Arg::with_name("context_radius")
+                .help("The unidiff context radius")
+                .short("c")
+                .long("context")
+                .value_name("NUMBER")
+                .takes_value(true)
+                .default_value("3"))
+        .get_matches();
 
-    let text1 = read_file(FILE_1)?;
-    let text2 = read_file(FILE_2)?;
+    let file_1 = args.value_of("file_1").unwrap();
+    let file_2 = args.value_of("file_2").unwrap();
+    let context_radius = args.value_of("context_radius").unwrap();
+    let context_radius: usize = context_radius.parse().expect("context_radius parsing error");
 
-    println!("--- {}\t{}", FILE_1, timestamp(FILE_1)?);
-    println!("+++ {}\t{}", FILE_2, timestamp(FILE_2)?);
+    let text1 = read_file(file_1)?;
+    let text2 = read_file(file_2)?;
 
-    for s in unidiff::unidiff(&text1, &text2, CONTEXT_RADIUS)? {
+    println!("--- {}\t{}", file_1, timestamp(file_1)?);
+    println!("+++ {}\t{}", file_2, timestamp(file_2)?);
+
+    for s in unidiff::unidiff(&text1, &text2, context_radius)? {
         println!("{}", s);
     }
     Ok(())
