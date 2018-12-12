@@ -78,7 +78,7 @@ impl Context {
 
     pub fn to_vec(&self, removed: usize, inserted: usize) -> Vec<String> {
         let start = if let Some(start) = self.start {
-            start + 1
+            start
         } else {
             return Vec::new();
         };
@@ -140,7 +140,7 @@ impl<'a> diffs::Diff for Processor<'a> {
                     }
                     context.counter = self.context_radius;
                     context.equaled = self.context_radius;
-                    context.start = Some(i - 2);
+                    context.start = Some(i - 1);
 
                     self.removed += self.context.removed;
                     self.inserted += self.context.inserted;
