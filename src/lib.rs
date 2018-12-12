@@ -77,11 +77,14 @@ impl Context {
     }
 
     pub fn to_vec(&self, removed: usize, inserted: usize) -> Vec<String> {
-        let start = if let Some(start) = self.start {
+        let mut start = if let Some(start) = self.start {
             start
         } else {
             return Vec::new();
         };
+        if start == 0 {
+            start = 1;
+        }
         let mut data = Vec::with_capacity(self.data.len() + 1);
         if self.changed {
             data.push(format!(
