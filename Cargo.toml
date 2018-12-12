@@ -2,6 +2,8 @@
 name = "diff-rs"
 version = "0.1.0"
 authors = ["hedgar2017 <hedgar2017@gmail.com>"]
+license = "MIT"
+description = "Rust diff implementation"
 
 [dependencies]
 diffs = "0.2.1"
