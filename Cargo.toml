@@ -1,6 +1,6 @@
 [package]
 name = "diff-rs"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["hedgar2017 <hedgar2017@gmail.com>"]
 license = "MIT"
 description = "Rust diff implementation"

@@ -66,7 +66,7 @@ fn main() -> io::Result<()> {
     println!("--- {}\t{}", file_1, timestamp(file_1)?);
     println!("+++ {}\t{}", file_2, timestamp(file_2)?);
 
-    for s in diff_rs::unidiff(&text1, &text2, context_radius)? {
+    for s in diff_rs::diff(&text1, &text2, context_radius)? {
         println!("{}", s);
     }
     Ok(())

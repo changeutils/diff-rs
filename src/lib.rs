@@ -6,7 +6,7 @@ extern crate diffs;
 
 use std::{collections::VecDeque, io};
 
-pub fn unidiff(
+pub fn diff(
     text1: &[String],
     text2: &[String],
     context_radius: usize,
