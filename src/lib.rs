@@ -2,8 +2,6 @@
 //! The GNU unidiff Rust library.
 //!
 
-extern crate diffs;
-
 use std::{collections::VecDeque, io};
 
 pub fn diff(
@@ -14,7 +12,7 @@ pub fn diff(
     let mut processor = Processor::new(&text1, &text2, context_radius);
     {
         let mut replace = diffs::Replace::new(&mut processor);
-        let _ = diffs::myers::diff(&mut replace, &text1, &text2)?;
+        diffs::myers::diff(&mut replace, &text1, &text2)?;
     }
     Ok(processor.result())
 }
@@ -95,7 +93,7 @@ impl Context {
                 self.equaled + self.inserted,
             ));
             for s in self.data.iter() {
-                data.push(format!("{}", s));
+                data.push(s.to_owned());
             }
         }
         data
@@ -155,6 +153,34 @@ impl<'a> diffs::Diff for Processor<'a> {
         Ok(())
     }
 
+    fn delete(&mut self, old: usize, len: usize) -> Result<(), Self::Error> {
+        if self.context.start.is_none() {
+            self.context.start = Some(old);
+        }
+
+        for i in old..old + len {
+            self.context.data.push_back(format!("-{}", self.text1[i]));
+        }
+        self.context.changed = true;
+        self.context.removed += len;
+
+        Ok(())
+    }
+
+    fn insert(&mut self, old: usize, new: usize, new_len: usize) -> Result<(), Self::Error> {
+        if self.context.start.is_none() {
+            self.context.start = Some(old);
+        }
+
+        for i in new..new + new_len {
+            self.context.data.push_back(format!("+{}", self.text2[i]));
+        }
+        self.context.changed = true;
+        self.context.inserted += new_len;
+
+        Ok(())
+    }
+
     fn replace(
         &mut self,
         old: usize,
@@ -175,34 +201,6 @@ impl<'a> diffs::Diff for Processor<'a> {
         self.context.changed = true;
         self.context.removed += old_len;
         self.context.inserted += new_len;
-
-        Ok(())
-    }
-
-    fn insert(&mut self, old: usize, new: usize, new_len: usize) -> Result<(), Self::Error> {
-        if self.context.start.is_none() {
-            self.context.start = Some(old);
-        }
-
-        for i in new..new + new_len {
-            self.context.data.push_back(format!("+{}", self.text2[i]));
-        }
-        self.context.changed = true;
-        self.context.inserted += new_len;
-
-        Ok(())
-    }
-
-    fn delete(&mut self, old: usize, len: usize) -> Result<(), Self::Error> {
-        if self.context.start.is_none() {
-            self.context.start = Some(old);
-        }
-
-        for i in old..old + len {
-            self.context.data.push_back(format!("-{}", self.text1[i]));
-        }
-        self.context.changed = true;
-        self.context.removed += len;
 
         Ok(())
     }

@@ -1,11 +1,6 @@
 //!
-//! The GNU unidiff Rust binary entry point.
+//! The GNU unidiff Rust binary.
 //!
-
-extern crate diff_rs;
-
-extern crate clap;
-extern crate chrono;
 
 use std::{
     fs,
