@@ -1,5 +1,5 @@
 //!
-//! The GNU unidiff Rust library.
+//! The Diff library.
 //!
 
 use std::{collections::VecDeque, io};
