@@ -1,3 +1,3 @@
 # diff-rs
 
-Rust diff implementation.
+Rust port of [GNU diffutils](https://www.gnu.org/software/diffutils/).
